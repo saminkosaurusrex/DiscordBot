@@ -2,6 +2,8 @@ using Application.Commands;
 using Application.Commands.Interfaces;
 using Discord;
 using Discord.WebSocket;
+using DiscordBot.Helpers;
+using Infrastructure.Models;
 using Infrastructure.Services;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -16,18 +18,22 @@ public sealed class DiscordBotHostedService : IHostedService
     private readonly IReadOnlyDictionary<string, ISlashCommandHandler> _handlers;
     private readonly ILogger<DiscordBotHostedService> _logger;
     private readonly SlashCommandRegistrar _registrar;
+    private readonly IMovieService _movieService;
+    private IReadOnlyList<Genre>? _genres;
 
     public DiscordBotHostedService(DiscordSocketClient client,
         IEnumerable<ISlashCommandHandler> handlers,
         IOptions<DiscordOptions> options,
         ILogger<DiscordBotHostedService> logger,
-        SlashCommandRegistrar registrar)
+        SlashCommandRegistrar registrar,
+        IMovieService movieService)
     {
         _client = client;
         _handlers = handlers.ToDictionary(h=> h.CommandName, StringComparer.OrdinalIgnoreCase);
         _options = options.Value;
         _logger = logger;
         _registrar = registrar;
+        _movieService = movieService;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -40,6 +46,7 @@ public sealed class DiscordBotHostedService : IHostedService
         _client.Log += OnLog;
         _client.Ready += OnReady;
         _client.SlashCommandExecuted += OnSlashCommandExecuted;
+        _client.AutocompleteExecuted += OnAutocompleteExecuted;
 
         
         await _client.LoginAsync(TokenType.Bot, _options.Token);
@@ -50,6 +57,7 @@ public sealed class DiscordBotHostedService : IHostedService
     {
         _client.Log -= OnLog;
         _client.Ready -= OnReady;
+        _client.AutocompleteExecuted -= OnAutocompleteExecuted;
         
         await _client.LogoutAsync();
         await _client.StopAsync();
@@ -84,7 +92,12 @@ public sealed class DiscordBotHostedService : IHostedService
             UserId: interaction.User.Id.ToString(),
             ChannelId: interaction.ChannelId?.ToString(),
             Options: options,
-            Respond: (text, ephemeral) => interaction.RespondAsync(text, ephemeral: ephemeral)
+            Respond: (text, ephemeral) => interaction.RespondAsync(text, ephemeral: ephemeral),
+            RespondWithMovie: movie =>
+            {
+                var embed = MovieEmbedBuilder.Build(movie);
+                return interaction.RespondAsync(embed: embed);
+            }
             );
         
         try
@@ -99,5 +112,27 @@ public sealed class DiscordBotHostedService : IHostedService
                 //fallback
                 await interaction.RespondAsync("Something went wrong.", ephemeral: true);
         }
+    }
+
+    private async Task OnAutocompleteExecuted(SocketAutocompleteInteraction interaction)
+    {
+        if (interaction.Data.CommandName != "movie" ||
+            interaction.Data.Current.Name != "genre")
+        {
+            await interaction.RespondAsync(
+                Array.Empty<AutocompleteResult>());
+            return;
+        }
+
+        _genres ??= (await _movieService.GetTmdbMovieGenresAsync()).Genres;
+        
+        var input = interaction.Data.Current.Value?.ToString() ?? string.Empty;
+
+        var result = _genres
+            .Where(g => g.Name.Contains(input, StringComparison.InvariantCultureIgnoreCase))
+            .Take(10)
+            .Select(g => new AutocompleteResult(g.Name, g.Id.ToString()));
+        
+        await interaction.RespondAsync(result);
     }
 }

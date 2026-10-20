@@ -14,6 +14,11 @@ public static class DependencyInjection
             .Bind(configuration.GetSection(DiscordOptions.SectionName))
             .Validate(o => !string.IsNullOrWhiteSpace(o.Token), "Discord token is required.")
             .ValidateOnStart();
+
+        services.AddOptions<TmdbOptions>()
+            .Bind(configuration.GetSection(TmdbOptions.SectionName))
+            .Validate(o => !string.IsNullOrWhiteSpace(o.ApiKey), "Tmdboptions API key is required.")
+            .ValidateOnStart();
         
         services.AddSingleton(new DiscordSocketConfig
         {
@@ -26,6 +31,7 @@ public static class DependencyInjection
         services.AddSingleton<SlashCommandRegistrar>();
         services.AddSingleton<DiscordSocketClient>();
         services.AddHostedService<DiscordBotHostedService>();
+        services.AddHttpClient<IMovieService,TmdbService>();
         
         return services;
     }

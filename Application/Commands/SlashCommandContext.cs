@@ -1,3 +1,5 @@
+using Infrastructure.Models;
+
 namespace Application.Commands;
 
 public record SlashCommandContext(
@@ -5,5 +7,6 @@ public record SlashCommandContext(
     string UserId,
     string ChannelId,
     IReadOnlyDictionary<string, object> Options,
-    Func<string, bool, Task> Respond
+    Func<string, bool, Task> Respond,
+    Func<Movie, Task> RespondWithMovie
     );

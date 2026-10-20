@@ -22,11 +22,55 @@ public sealed class SlashCommandRegistrar
     public async Task RegisterAsync(ulong? developmentGuildId)
     {
         var commands = _handlers.Select(h =>
-            new SlashCommandBuilder()
+        {
+            var builder = new SlashCommandBuilder()
                 .WithName(h.CommandName)
-                .WithDescription(h.Description)
-                . Build())
-            .ToArray();
+                .WithDescription(h.Description);
+
+            if (h.CommandName == "movie")
+            {
+                builder.AddOption(
+                    name: "genre",
+                    type: ApplicationCommandOptionType.String,
+                    description: "Genre of the movie",
+                    isRequired: true,
+                    isAutocomplete: true);
+
+                builder.AddOption(
+                    name: "min_rating",
+                    type: ApplicationCommandOptionType.Number,
+                    description: "Minimum movie rating (0-10)",
+                    isRequired: false,
+                    minValue: 0,
+                    maxValue: 10);
+
+                builder.AddOption(
+                    name: "min_votes",
+                    type: ApplicationCommandOptionType.Integer,
+                    description: "Minimum number of votes",
+                    isRequired: false,
+                    minValue: 0);
+
+                builder.AddOption(
+                    name: "year_from",
+                    type: ApplicationCommandOptionType.Integer,
+                    description: "Earliest release year",
+                    isRequired: false,
+                    minValue: 1870,
+                    maxValue: 2100);
+
+                builder.AddOption(
+                    name: "year_to",
+                    type: ApplicationCommandOptionType.Integer,
+                    description: "Latest release year",
+                    isRequired: false,
+                    minValue: 1870,
+                    maxValue: 2100);
+            }
+
+            return builder.Build();
+        }).ToArray();
+            
 
         if (developmentGuildId.HasValue)
         {

@@ -6,9 +6,12 @@ namespace Application;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddAplication(this IServiceCollection service)
+    public static IServiceCollection AddApplication(this IServiceCollection service)
     {
         service.AddSingleton<ISlashCommandHandler, PingSlashCommandHandler>();
+        service.AddSingleton<ISlashCommandHandler, AboutSlashCommandHandler>();
+        service.AddSingleton<ISlashCommandHandler, KeksSlashCommandHandler>();
+        service.AddSingleton<ISlashCommandHandler, MovieSlashCommandHandler>();
         return service;
     }
 }
