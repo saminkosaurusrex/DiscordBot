@@ -62,3 +62,11 @@ jobs:
             --tag discordmoviebotacr.azurecr.io/discord-movie-bot:amd64 \
             --push \
             .
+      
+      - name: Deploy to Azure Container Apps
+        run: |
+          az containerapp update \
+            --name discord-movie-bot \
+            --resource-group rg-discord-movie-bot \
+            --image discordmoviebotacr.azurecr.io/discord-movie-bot:amd64
+
