@@ -21,6 +21,9 @@ public sealed class SlashCommandRegistrar
 
     public async Task RegisterAsync(ulong? developmentGuildId)
     {
+        _logger.LogInformation(
+            "Starting slash command registration. DevelopmentGuildId: {GuildId}",
+            developmentGuildId);
         var commands = _handlers.Select(h =>
         {
             var builder = new SlashCommandBuilder()
@@ -71,7 +74,10 @@ public sealed class SlashCommandRegistrar
             return builder.Build();
         }).ToArray();
             
-
+        _logger.LogInformation(
+            "Commands to register: {Commands}",
+            string.Join(", ", commands.Select(c => c.Name)));
+        
         if (developmentGuildId.HasValue)
         {
             var guild = _client.GetGuild(developmentGuildId.Value);
