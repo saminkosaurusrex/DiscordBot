@@ -45,6 +45,7 @@ public sealed class DiscordBotHostedService : IHostedService
 
         _client.Log += OnLog;
         _client.Ready += OnReady;
+        _client.Disconnected += OnDisconnected;
         _client.SlashCommandExecuted += OnSlashCommandExecuted;
         _client.AutocompleteExecuted += OnAutocompleteExecuted;
 
@@ -65,22 +66,30 @@ public sealed class DiscordBotHostedService : IHostedService
 
     private Task OnLog(LogMessage msg)
     {
+        var level = msg.Severity switch
+        {
+            LogSeverity.Critical => LogLevel.Critical,
+            LogSeverity.Error => LogLevel.Error,
+            LogSeverity.Warning => LogLevel.Warning,
+            LogSeverity.Info => LogLevel.Information,
+            LogSeverity.Verbose => LogLevel.Debug,
+            LogSeverity.Debug => LogLevel.Debug,
+            _ => LogLevel.Information
+        };
+
         _logger.Log(
-            msg.Severity switch
-            {
-                LogSeverity.Critical => LogLevel.Critical,
-                LogSeverity.Error => LogLevel.Error,
-                LogSeverity.Warning => LogLevel.Warning,
-                LogSeverity.Info => LogLevel.Information,
-                LogSeverity.Verbose => LogLevel.Debug,
-                LogSeverity.Debug => LogLevel.Debug,
-                _ => LogLevel.Information
-            },
+            level,
             msg.Exception,
-            "[Discord] {Source}: {Message}",
+            "[Discord.Net] Source: {Source}; Message: {Message}",
             msg.Source,
-            msg.Message
-        );
+            msg.Message);
+
+        if (msg.Exception is not null)
+        {
+            _logger.LogError(
+                "{ExceptionDetails}",
+                msg.Exception.ToString());
+        }
 
         return Task.CompletedTask;
     }
@@ -158,5 +167,23 @@ public sealed class DiscordBotHostedService : IHostedService
             .Select(g => new AutocompleteResult(g.Name, g.Id.ToString()));
         
         await interaction.RespondAsync(result);
+    }
+    
+    private Task OnDisconnected(Exception? exception)
+    {
+        if (exception is null)
+        {
+            _logger.LogWarning(
+                "[Discord] Disconnected without an exception.");
+        }
+        else
+        {
+            _logger.LogError(
+                exception,
+                "[Discord] Disconnected. Details: {Details}",
+                exception.ToString());
+        }
+
+        return Task.CompletedTask;
     }
 }
