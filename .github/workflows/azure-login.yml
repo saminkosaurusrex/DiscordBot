@@ -1,5 +1,5 @@
 
-name: CI
+name: CI/CD
 
 on:
   workflow_dispatch:
@@ -29,3 +29,36 @@ jobs:
 
       - name: Build solution
         run: dotnet build DiscordBot.sln --configuration Release --no-restore
+
+  docker:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to Azure Container Registry
+        run: az acr login --name discordmoviebotacr
+
+      - name: Build and push Docker image
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            --provenance=false \
+            --sbom=false \
+            --tag discordmoviebotacr.azurecr.io/discord-movie-bot:amd64 \
+            --push \
+            .
