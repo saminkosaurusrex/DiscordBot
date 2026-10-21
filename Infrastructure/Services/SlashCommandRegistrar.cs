@@ -27,7 +27,7 @@ public sealed class SlashCommandRegistrar
                 .WithName(h.CommandName)
                 .WithDescription(h.Description);
 
-            if (h.CommandName == "movie")
+            if (h.CommandName == "movie" || h.CommandName == "popular")
             {
                 builder.AddOption(
                     name: "genre",

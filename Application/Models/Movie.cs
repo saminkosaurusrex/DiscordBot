@@ -7,9 +7,9 @@ public class Movie
     [JsonPropertyName("id")]
     public int Id { get; set; }
     [JsonPropertyName("original_title")]
-    public string Title { get; set; }
+    public required string Title { get; set; }
     [JsonPropertyName("overview")]
-    public string Overview { get; set; }
+    public required string Overview { get; set; }
     [JsonPropertyName("vote_average")]
     public float VoteAverage { get; set; }
     [JsonPropertyName("poster_path")]

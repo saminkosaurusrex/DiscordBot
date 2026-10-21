@@ -65,7 +65,23 @@ public sealed class DiscordBotHostedService : IHostedService
 
     private Task OnLog(LogMessage msg)
     {
-        _logger.LogInformation("[Discord] {Message}", msg.Message ?? msg.Exception?.Message);
+        _logger.Log(
+            msg.Severity switch
+            {
+                LogSeverity.Critical => LogLevel.Critical,
+                LogSeverity.Error => LogLevel.Error,
+                LogSeverity.Warning => LogLevel.Warning,
+                LogSeverity.Info => LogLevel.Information,
+                LogSeverity.Verbose => LogLevel.Debug,
+                LogSeverity.Debug => LogLevel.Debug,
+                _ => LogLevel.Information
+            },
+            msg.Exception,
+            "[Discord] {Source}: {Message}",
+            msg.Source,
+            msg.Message
+        );
+
         return Task.CompletedTask;
     }
 
@@ -90,15 +106,22 @@ public sealed class DiscordBotHostedService : IHostedService
         var context = new SlashCommandContext(
             CommandName: interaction.CommandName,
             UserId: interaction.User.Id.ToString(),
-            ChannelId: interaction.ChannelId?.ToString(),
+            // ???
+            ChannelId: interaction.ChannelId.ToString() ?? string.Empty,
             Options: options,
             Respond: (text, ephemeral) => interaction.RespondAsync(text, ephemeral: ephemeral),
             RespondWithMovie: movie =>
             {
-                var embed = MovieEmbedBuilder.Build(movie);
+                var embed = MovieEmbedBuilder.BuildMovie(movie);
+                return interaction.RespondAsync(embed: embed);
+            },
+            RespondWithMovies: movies =>
+            {
+                var embed = MovieEmbedBuilder.BuildMovies(movies);
                 return interaction.RespondAsync(embed: embed);
             }
-            );
+        );
+        
         
         try
         {
@@ -116,7 +139,8 @@ public sealed class DiscordBotHostedService : IHostedService
 
     private async Task OnAutocompleteExecuted(SocketAutocompleteInteraction interaction)
     {
-        if (interaction.Data.CommandName != "movie" ||
+        if ((interaction.Data.CommandName != "movie" &&
+             interaction.Data.CommandName != "popular") ||
             interaction.Data.Current.Name != "genre")
         {
             await interaction.RespondAsync(
@@ -130,7 +154,7 @@ public sealed class DiscordBotHostedService : IHostedService
 
         var result = _genres
             .Where(g => g.Name.Contains(input, StringComparison.InvariantCultureIgnoreCase))
-            .Take(10)
+            .Take(22)
             .Select(g => new AutocompleteResult(g.Name, g.Id.ToString()));
         
         await interaction.RespondAsync(result);
