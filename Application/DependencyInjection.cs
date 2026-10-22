@@ -15,6 +15,7 @@ public static class DependencyInjection
         service.AddSingleton<ISlashCommandHandler, PopularMoviesHandler>();
         service.AddSingleton<ISlashCommandHandler, TomasCommandHandler>();
         service.AddSingleton<ISlashCommandHandler, FilkoCommandHandler>();
+        service.AddSingleton<ISlashCommandHandler, FutbalistaCommandHandler>();
         return service;
     }
 }
